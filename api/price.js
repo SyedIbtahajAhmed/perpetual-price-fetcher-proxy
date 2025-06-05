@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
-  const symbol = req.query.symbol || 'BTCUSDT';
+  const symbol = req.query.symbol || 'BTCUSDT_UMCBL';
 
-  const url = `https://api.bybit.com/v5/market/kline?category=linear&symbol=${symbol}&interval=1D&limit=1`;
+  const url = `https://api.bitget.com/api/mix/v1/market/candles?symbol=${symbol}&granularity=86400&limit=1`;
 
   try {
     const response = await fetch(url, {
@@ -10,29 +10,18 @@ export default async function handler(req, res) {
       }
     });
 
-    const contentType = response.headers.get("content-type");
-    const status = response.status;
-
-    if (!contentType || !contentType.includes("application/json")) {
-      const text = await response.text(); // Log HTML or error page
-      return res.status(status).json({
-        error: `Non-JSON response (status ${status})`,
-        body: text.slice(0, 500) // Send a preview to help debug
-      });
-    }
-
     const data = await response.json();
 
-    if (!data?.result?.list?.length) {
-      return res.status(500).json({ error: "No kline data returned from Bybit" });
+    if (!data?.data?.length) {
+      return res.status(500).json({ error: "No data returned" });
     }
 
-    const [timestamp, openPrice] = [data.result.list[0][0], data.result.list[0][1]];
+    const kline = data.data[0]; // [time, open, high, low, close, volume, quoteVolume]
 
     return res.status(200).json({
-      symbol,
-      openTime: new Date(Number(timestamp)).toISOString(),
-      openPrice: parseFloat(openPrice)
+      symbol: symbol,
+      openTime: new Date(Number(kline[0])).toISOString(),
+      openPrice: parseFloat(kline[1])
     });
 
   } catch (err) {
